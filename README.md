@@ -69,6 +69,8 @@ flowchart LR
     DIRTY -->|every 10s| DB[(PostgreSQL)]
 ```
 
+![Neil Fraser: Writing: Differential Synchronization](./assets/image.png)
+
 ## Past Method
 
 The earlier method sent the full document text on every change.
