@@ -26,12 +26,14 @@ export const initializeSocket = (server) => {
         });
         socket.on("diff-broadcast", async ({ documentId, diff }) => {
             try {
-                // patch dif with shadow
-                if(await shadow.patchShadow(documentId, socket.id,diff)){
-                    socket.to(documentId).emit("diff-broadcast", diff);
-                }else{
+                const clientDiffs = shadow.patchShadow(documentId, socket.id, diff);
+                if (clientDiffs === false) {
                     throw new Error("Document content update failed");
                 }
+
+                clientDiffs.forEach(({ socketId, diff }) => {
+                    io.to(socketId).emit("diff-broadcast", diff);
+                });
             } catch (error) {
                 console.error("Document content update failed:", error);
             }

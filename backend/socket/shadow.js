@@ -1,8 +1,9 @@
 import {pool} from "../db/db.js"
+import { getDiff } from "./diff.js";
 
-const documents = new Map();
-const shadows = new Map();
-const dirtyDocs = new Set();
+export const documents = new Map();
+export const shadows = new Map();
+export const dirtyDocs = new Set();
 
 class Shadow {
     constructor() {
@@ -70,19 +71,34 @@ class Shadow {
         if (!diff || !documents.has(docId)) return false;
         if (!shadows.has(docId)) return false;
 
+        if (!shadows.get(docId).has(socketId)) return false;
+
         const clients = shadows.get(docId);
+        const text = this.applyDiff(clients.get(socketId), diff);
 
-        if (!clients.has(socketId)) return false;
-
-        const text = this.applyDiff(documents.get(docId), diff);
+        clients.set(socketId, text);
         documents.set(docId, text);
 
-        for (const clientId of clients.keys()) {
-            clients.set(clientId, text);
-        }
-
         dirtyDocs.add(docId);
-        return true;
+        return this.diffOthers(docId, socketId);
+    }
+
+    diffOthers(docId, socketId){
+        const clients = shadows.get(docId);
+        const text = documents.get(docId);
+        const diffs = [];
+
+        clients.forEach((clientText, clientId) => {
+            if (clientId === socketId) return;
+
+            const diff = getDiff(text, clientText);
+            if (!diff) return;
+
+            clients.set(clientId, this.applyDiff(clientText, diff));
+            diffs.push({ socketId: clientId, diff });
+        });
+
+        return diffs;
     }
 
     applyDiff(text, diff) {

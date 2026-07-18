@@ -1,4 +1,5 @@
 import { pool } from "../db/db.js";
+import {documents} from "../socket/shadow.js";
 
 export const listDocuments = async (req, res) => {
     try {
@@ -61,6 +62,10 @@ export const createDocument = async (req, res) => {
 
 export const getDocument = async (req, res) => {
     try {
+        let content = "";
+        if(documents.has(req.params.id)){
+            content = documents.get(req.params.id);
+        }
         const { rows } = await pool.query(
             `SELECT d.id, d.title, dc.content, d.created_at, d.updated_at
              FROM documents d
@@ -73,6 +78,7 @@ export const getDocument = async (req, res) => {
             return res.status(404).json({ message: "Document not found" });
         }
 
+        rows[0].content = content;
         res.status(200).json({ document: rows[0] });
     } catch (error) {
         console.error(error);
